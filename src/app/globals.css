@@ -1,0 +1,268 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ------------------------------------------------------------------
+   BOSS design tokens
+   Every colour used by a component must resolve to a token declared
+   here. Components never hard-code hex values.
+   ------------------------------------------------------------------ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
+
+  /* shadcn surface scale */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* BOSS palette — the neon accents that drive the whole UI */
+  --color-cyan: var(--boss-cyan);
+  --color-cyan-soft: var(--boss-cyan-soft);
+  --color-blue: var(--boss-blue);
+  --color-violet: var(--boss-violet);
+  --color-magenta: var(--boss-magenta);
+  --color-emerald: var(--boss-emerald);
+  --color-amber: var(--boss-amber);
+  --color-rose: var(--boss-rose);
+  --color-indigo: var(--boss-indigo);
+  --color-teal: var(--boss-teal);
+
+  /* Semantic status colours */
+  --color-status-online: var(--boss-emerald);
+  --color-status-working: var(--boss-amber);
+  --color-status-soon: var(--boss-slate);
+
+  /* Structural surfaces */
+  --color-panel: var(--panel);
+  --color-panel-strong: var(--panel-strong);
+  --color-panel-border: var(--panel-border);
+  --color-hairline: var(--hairline);
+
+  /* Radii */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  /* Base canvas — deep navy, not neutral black */
+  --background: oklch(0.17 0.045 264);
+  --foreground: oklch(0.96 0.012 250);
+
+  --card: oklch(0.225 0.048 262);
+  --card-foreground: oklch(0.96 0.012 250);
+  --popover: oklch(0.225 0.048 262);
+  --popover-foreground: oklch(0.96 0.012 250);
+
+  --primary: oklch(0.78 0.15 205);
+  --primary-foreground: oklch(0.18 0.05 264);
+  --secondary: oklch(0.28 0.05 262);
+  --secondary-foreground: oklch(0.96 0.012 250);
+  --muted: oklch(0.28 0.05 262);
+  --muted-foreground: oklch(0.7 0.035 255);
+  --accent: oklch(0.32 0.06 262);
+  --accent-foreground: oklch(0.96 0.012 250);
+  --destructive: oklch(0.64 0.21 20);
+
+  --border: oklch(0.98 0.02 240 / 12%);
+  --input: oklch(0.98 0.02 240 / 15%);
+  --ring: oklch(0.78 0.15 205 / 60%);
+
+  --sidebar: oklch(0.2 0.05 264);
+  --sidebar-foreground: oklch(0.94 0.012 250);
+  --sidebar-primary: oklch(0.78 0.15 205);
+  --sidebar-primary-foreground: oklch(0.18 0.05 264);
+  --sidebar-accent: oklch(0.3 0.06 262);
+  --sidebar-accent-foreground: oklch(0.96 0.012 250);
+  --sidebar-border: oklch(0.98 0.02 240 / 10%);
+  --sidebar-ring: oklch(0.78 0.15 205 / 60%);
+
+  /* Neon accents */
+  --boss-cyan: oklch(0.82 0.15 200);
+  --boss-cyan-soft: oklch(0.7 0.12 210);
+  --boss-blue: oklch(0.66 0.2 258);
+  --boss-violet: oklch(0.66 0.22 295);
+  --boss-magenta: oklch(0.68 0.24 330);
+  --boss-emerald: oklch(0.76 0.19 155);
+  --boss-amber: oklch(0.8 0.16 80);
+  --boss-rose: oklch(0.68 0.2 15);
+  --boss-indigo: oklch(0.62 0.2 275);
+  --boss-teal: oklch(0.75 0.13 185);
+  --boss-slate: oklch(0.62 0.03 255);
+
+  /* Panels: translucent glass over the starfield */
+  --panel: oklch(0.24 0.05 263 / 72%);
+  --panel-strong: oklch(0.26 0.05 263 / 92%);
+  --panel-border: oklch(0.8 0.09 230 / 16%);
+  --hairline: oklch(0.8 0.09 230 / 10%);
+
+  /* Glow recipes — reused by the .glow-* utilities below */
+  --glow-cyan: 0 0 0 1px oklch(0.82 0.15 200 / 22%),
+    0 0 24px -4px oklch(0.82 0.15 200 / 45%);
+  --glow-violet: 0 0 0 1px oklch(0.66 0.22 295 / 22%),
+    0 0 24px -4px oklch(0.66 0.22 295 / 45%);
+  --glow-soft: 0 1px 0 0 oklch(1 0 0 / 6%) inset,
+    0 8px 30px -12px oklch(0.1 0.04 264 / 80%);
+  --glow-ring: 0 0 32px -6px oklch(0.82 0.15 200 / 55%);
+}
+
+/* The app is dark-only by design; .dark inherits the same scale so
+   shadcn's dark: variants stay consistent. */
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image: var(--space-backdrop);
+    background-attachment: fixed;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Background: layered nebula + starfield
+   ------------------------------------------------------------------ */
+:root {
+  --space-backdrop:
+    radial-gradient(
+      ellipse 70% 55% at 50% 42%,
+      oklch(0.45 0.17 262 / 30%) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 45% 40% at 12% 8%,
+      oklch(0.5 0.16 300 / 22%) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 50% 45% at 92% 85%,
+      oklch(0.5 0.15 200 / 20%) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 80% 5%,
+      oklch(0.42 0.14 330 / 16%) 0%,
+      transparent 70%
+    );
+}
+
+@layer utilities {
+  .glow-cyan {
+    box-shadow: var(--glow-cyan);
+  }
+  .glow-violet {
+    box-shadow: var(--glow-violet);
+  }
+  .glow-soft {
+    box-shadow: var(--glow-soft);
+  }
+  .glow-ring {
+    box-shadow: var(--glow-ring);
+  }
+
+  /* Frosted panel used by every card in the dashboard */
+  .panel {
+    background-color: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(14px);
+    box-shadow: var(--glow-soft);
+  }
+
+  /* Text that picks up the accent colour passed via --accent-color */
+  .text-accent-glow {
+    color: var(--accent-color);
+    text-shadow: 0 0 18px var(--accent-color);
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Starfield: two tiled dot layers that drift very slowly */
+.starfield {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, oklch(1 0 0 / 55%) 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 12%, oklch(1 0 0 / 40%) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 44% 74%, oklch(1 0 0 / 50%) 50%, transparent 50%),
+    radial-gradient(1px 1px at 88% 58%, oklch(1 0 0 / 35%) 50%, transparent 50%),
+    radial-gradient(1px 1px at 12% 86%, oklch(1 0 0 / 45%) 50%, transparent 50%),
+    radial-gradient(1px 1px at 60% 44%, oklch(1 0 0 / 30%) 50%, transparent 50%);
+  background-size: 260px 260px, 340px 340px, 420px 420px, 300px 300px,
+    380px 380px, 240px 240px;
+  animation: starfield-drift 200s linear infinite;
+  opacity: 0.7;
+}
+
+@keyframes starfield-drift {
+  from {
+    background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 260px 520px, -340px 680px, 420px -840px, -300px 600px,
+      380px 760px, -240px 480px;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.4s ease-in-out infinite;
+}
