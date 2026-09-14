@@ -27,12 +27,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Customer Support", href: "/support", icon: Headset },
   { label: "Agents", href: "/agents", icon: Users, comingSoon: true },
   { label: "Chats", href: "/chats", icon: MessageSquare, comingSoon: true },
-  {
-    label: "Apps & Integrations",
-    href: "/apps",
-    icon: Blocks,
-    comingSoon: true,
-  },
+  // "Apps & Integrations" truncates next to the SOON badge; "Integrations"
+  // carries the same meaning and fits.
+  { label: "Integrations", href: "/apps", icon: Blocks, comingSoon: true },
   { label: "Emails", href: "/emails", icon: Mail, comingSoon: true },
   { label: "Calendar", href: "/calendar", icon: Calendar, comingSoon: true },
   { label: "Tasks", href: "/tasks", icon: ListChecks, comingSoon: true },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Sun, Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 
 const NOTIFICATION_COUNT = 3;
 
@@ -48,34 +48,22 @@ function Clock() {
 
 export function TopBar() {
   return (
-    <header className="relative z-20 flex h-[68px] shrink-0 items-center gap-4 border-b border-panel-border px-6 backdrop-blur-xl">
-      {/* Search */}
-      <div className="group relative w-full max-w-[620px]">
-        <Search className="pointer-events-none absolute left-4 top-1/2 size-[17px] -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          placeholder="Search anything... (apps, files, messages, tasks, web...)"
-          className="h-11 w-full rounded-full border border-panel-border bg-card/50 pl-11 pr-20 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-cyan/40 focus:shadow-[0_0_24px_-8px_var(--boss-cyan)]"
-        />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 text-[11px] text-muted-foreground">
-          <span className="rounded border border-panel-border bg-muted/60 px-1.5 py-0.5">
-            Ctrl
+    <header className="relative z-20 flex h-[72px] shrink-0 items-center gap-4 border-b border-panel-border px-6 backdrop-blur-xl">
+      {/* Greeting back in the top bar, freeing the centre column's height for
+          the orb/network. */}
+      <div className="min-w-0">
+        <h1 className="truncate text-[19px] font-semibold leading-tight text-foreground">
+          Good Afternoon, Ali{" "}
+          <span className="inline-block origin-[70%_70%] animate-pulse-glow">
+            👋
           </span>
-          <span className="rounded border border-panel-border bg-muted/60 px-1.5 py-0.5">
-            K
-          </span>
-        </kbd>
+        </h1>
+        <p className="truncate text-[12px] text-muted-foreground">
+          Your AI agents are ready. What would you like to do today?
+        </p>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Toggle theme"
-          className="grid size-10 place-items-center rounded-full border border-panel-border bg-card/50 text-amber transition-colors hover:bg-accent"
-        >
-          <Sun className="size-[18px]" />
-        </button>
-
         <button
           type="button"
           aria-label={`Notifications (${NOTIFICATION_COUNT} unread)`}

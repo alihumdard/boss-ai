@@ -38,11 +38,11 @@ export function Sidebar() {
             return (
               <div
                 key={item.href}
-                className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-muted-foreground/45"
+                className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-muted-foreground/70"
               >
                 <Icon className="size-[18px] shrink-0" />
                 <span className="truncate">{item.label}</span>
-                <span className="ml-auto shrink-0 rounded-full border border-panel-border px-1.5 py-px text-[9px] uppercase tracking-wide text-muted-foreground/60">
+                <span className="ml-auto shrink-0 rounded-full border border-panel-border px-1.5 py-px text-[9px] uppercase tracking-wide text-muted-foreground/75">
                   Soon
                 </span>
               </div>

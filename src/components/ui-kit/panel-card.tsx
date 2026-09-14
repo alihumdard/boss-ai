@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface PanelCardProps {
@@ -9,6 +9,9 @@ interface PanelCardProps {
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** Stagger for the mount fade+rise, in ms — e.g. 0, 60, 120 for a row of
+   * panels appearing in sequence. */
+  enterDelayMs?: number;
 }
 
 /** The frosted card used by every dashboard panel. */
@@ -19,10 +22,12 @@ export function PanelCard({
   children,
   className,
   bodyClassName,
+  enterDelayMs = 0,
 }: PanelCardProps) {
   return (
     <section
-      className={cn("panel flex flex-col rounded-xl", className)}
+      className={cn("panel panel-enter flex flex-col rounded-xl", className)}
+      style={{ "--panel-delay": `${enterDelayMs}ms` } as CSSProperties}
     >
       {title && (
         <header className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">

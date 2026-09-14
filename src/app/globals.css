@@ -28,6 +28,9 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-muted-foreground-dim: var(--muted-foreground-dim);
+  --color-card-soon: var(--card-soon);
+  --color-border-soon: var(--border-soon);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -94,6 +97,15 @@
   --secondary-foreground: oklch(0.96 0.012 250);
   --muted: oklch(0.28 0.05 262);
   --muted-foreground: oklch(0.7 0.035 255);
+  /* One step dimmer than muted-foreground, for a subtitle under a title that
+     already uses muted-foreground — still >= 3:1 against --card-soon below. */
+  --muted-foreground-dim: oklch(0.58 0.025 255);
+  /* Visible background for "coming soon" surfaces: a step lighter than the
+     page (0.17) but still clearly dimmer than a live --card (0.225). */
+  --card-soon: oklch(0.205 0.04 262);
+  /* Dim neutral for a "coming soon" card's dashed border — visible against
+     both --card-soon and the page, not the near-invisible panel-border. */
+  --border-soon: oklch(0.55 0.025 255 / 45%);
   --accent: oklch(0.32 0.06 262);
   --accent-foreground: oklch(0.96 0.012 250);
   --destructive: oklch(0.64 0.21 20);
@@ -124,11 +136,21 @@
   --boss-teal: oklch(0.75 0.13 185);
   --boss-slate: oklch(0.62 0.03 255);
 
-  /* Panels: translucent glass over the starfield */
-  --panel: oklch(0.24 0.05 263 / 72%);
-  --panel-strong: oklch(0.26 0.05 263 / 92%);
+  /* Orb body — deep navy so the cyan fresnel rim reads as a lit edge. */
+  --orb-core: oklch(0.26 0.13 268);
+  /* Surface points: near-white so they read as light, not as tinted haze. */
+  --orb-dot: oklch(0.93 0.06 200);
+
+  /* Panels: translucent glass over the starfield. Lifted a step above the
+     page background (0.24 -> 0.275 L) so panels read as raised surfaces
+     rather than blending into the backdrop, per the Step 4 contrast pass. */
+  --panel: oklch(0.275 0.052 263 / 78%);
+  --panel-strong: oklch(0.3 0.052 263 / 94%);
   --panel-border: oklch(0.8 0.09 230 / 16%);
-  --hairline: oklch(0.8 0.09 230 / 10%);
+  /* Brighter than panel-border: panels get a top edge that catches light,
+     like a physical surface would. */
+  --panel-border-top: oklch(0.85 0.1 210 / 34%);
+  --hairline: oklch(0.8 0.09 230 / 14%);
 
   /* Glow recipes — reused by the .glow-* utilities below */
   --glow-cyan: 0 0 0 1px oklch(0.82 0.15 200 / 22%),
@@ -149,6 +171,17 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  /* Guarantees a visible keyboard-focus ring on every interactive element,
+     not just the ones with an explicit focus-visible: class — buttons,
+     links and form controls throughout the sidebar and top bar rely on this
+     rather than repeating the same utility everywhere. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--boss-cyan);
+    outline-offset: 2px;
   }
   html {
     @apply font-sans;
@@ -185,6 +218,12 @@
       ellipse 60% 50% at 80% 5%,
       oklch(0.42 0.14 330 / 16%) 0%,
       transparent 70%
+    ),
+    /* Pool of light under the orb's pedestal, anchoring it to the stage. */
+    radial-gradient(
+      ellipse 26% 16% at 50% 62%,
+      oklch(0.6 0.15 220 / 20%) 0%,
+      transparent 75%
     );
 }
 
@@ -202,12 +241,37 @@
     box-shadow: var(--glow-ring);
   }
 
-  /* Frosted panel used by every card in the dashboard */
+  /* Frosted panel used by every card in the dashboard. The top border is
+     brighter than the other three sides, so panels read as lit from above
+     like a physical surface, and the hover state brightens the whole border
+     plus adds a soft lift shadow (150ms, per the Step 4 motion pass). */
   .panel {
     background-color: var(--panel);
     border: 1px solid var(--panel-border);
+    border-top-color: var(--panel-border-top);
     backdrop-filter: blur(14px);
     box-shadow: var(--glow-soft);
+    transition:
+      border-color 150ms ease-out,
+      box-shadow 150ms ease-out;
+  }
+  .panel:hover {
+    border-color: oklch(0.8 0.09 230 / 28%);
+    border-top-color: var(--panel-border-top);
+    box-shadow:
+      var(--glow-soft),
+      0 12px 32px -14px oklch(0.1 0.04 264 / 90%);
+  }
+
+  /* Panels fade and rise on mount, staggered by an inline --panel-delay. */
+  .panel-enter {
+    animation: panel-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--panel-delay, 0ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .panel-enter {
+      animation: none;
+    }
   }
 
   /* Text that picks up the accent colour passed via --accent-color */
@@ -265,4 +329,23 @@
 
 .animate-pulse-glow {
   animation: pulse-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Every animation defined here is paused while the tab is hidden, per Step 4
+   — cheaper than tearing down/rebuilding each animated element, and it
+   covers the starfield drift and pulse-glow the same way as any future one
+   added to this stylesheet. */
+body:not(.tab-visible) * {
+  animation-play-state: paused !important;
 }

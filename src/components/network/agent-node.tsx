@@ -1,56 +1,96 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { NetworkNode } from "@/lib/network-layout";
+import {
+  FULL_STAGE,
+  type NetworkNode,
+  type StageGeometry,
+} from "@/lib/network-layout";
 import { accentStyle } from "@/lib/accent";
 import { StatusDot } from "@/components/ui-kit/status-dot";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { cn } from "@/lib/utils";
 
 interface AgentNodeProps {
   node: NetworkNode;
   index: number;
+  /** Icon + name only, for narrow viewports. */
+  compact?: boolean;
+  geo?: StageGeometry;
 }
 
-export function AgentNode({ node, index }: AgentNodeProps) {
+export function AgentNode({
+  node,
+  index,
+  compact,
+  geo = FULL_STAGE,
+}: AgentNodeProps) {
   const Icon = node.icon;
   const isSoon = node.status === "coming-soon";
+  const reducedMotion = useReducedMotion();
 
   return (
     <motion.div
       style={{
         ...accentStyle(node.accent),
-        left: `${node.pos.x}%`,
-        top: `${node.pos.y}%`,
+        left: node.pos.x,
+        top: node.pos.y,
+        width: geo.cardW,
       }}
-      // Anchored so the card's connector edge sits on its coordinate.
-      className={cn(
-        "absolute -translate-y-1/2",
-        node.pos.anchor === "right" ? "-translate-x-full" : "translate-x-0",
-      )}
+      className="absolute -translate-x-1/2 -translate-y-1/2"
       initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, delay: 0.1 + index * 0.06 }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        // Cards drift a couple of px so the network feels alive. Kept small
+        // enough that it never eats into the gap between neighbours. Dropped
+        // to a fixed 0 under reduced motion rather than looping.
+        y: reducedMotion ? 0 : [0, index % 2 === 0 ? -3 : 3, 0],
+      }}
+      transition={{
+        opacity: { duration: reducedMotion ? 0 : 0.4, delay: reducedMotion ? 0 : 0.1 + index * 0.06 },
+        scale: { duration: reducedMotion ? 0 : 0.4, delay: reducedMotion ? 0 : 0.1 + index * 0.06 },
+        y: reducedMotion
+          ? { duration: 0 }
+          : {
+              duration: 5 + (index % 3),
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: index * 0.3,
+            },
+      }}
     >
       <div
         className={cn(
-          "group flex w-[212px] items-center gap-2.5 rounded-xl border px-3 py-2.5 backdrop-blur-md transition-colors",
+          "flex items-center gap-2.5 rounded-xl backdrop-blur-md transition-colors",
+          compact ? "px-2.5 py-2" : "px-3 py-2.5",
           isSoon
-            ? "border-panel-border/60 bg-card/35"
-            : "border-[var(--accent-color)]/30 bg-card/70 hover:border-[var(--accent-color)]/55",
+            ? // Coming soon: visible card background (a step lighter than the
+              // page) with a dim dashed border — legible, not near-invisible,
+              // but clearly secondary to a live card. Never below 0.75 opacity
+              // on the card as a whole.
+              "border border-dashed border-border-soon bg-card-soon opacity-75"
+            : // Active: solid panel, border in the agent's own colour, soft
+              // outer glow — this is the card that should read as dominant.
+              "border border-[var(--accent-color)]/50 bg-panel-strong shadow-[0_0_28px_-8px_var(--accent-color)] hover:border-[var(--accent-color)]/75",
         )}
       >
         <span
           className={cn(
-            "grid size-9 shrink-0 place-items-center rounded-lg border",
+            "grid shrink-0 place-items-center rounded-full",
+            compact ? "size-9" : "size-11",
             isSoon
-              ? "border-panel-border bg-muted/30"
-              : "border-[var(--accent-color)]/35 bg-[var(--accent-color)]/15 shadow-[0_0_16px_-4px_var(--accent-color)]",
+              ? // Desaturated (not simply grey) so the agent's own colour
+                // still identifies it, just muted.
+                "bg-[var(--accent-color)]/18 saturate-[0.35]"
+              : // Round icon chip with the agent's own colour gradient + glow.
+                "bg-[radial-gradient(circle_at_30%_25%,var(--accent-color),transparent_70%)] shadow-[0_0_22px_-3px_var(--accent-color)] ring-1 ring-[var(--accent-color)]/60",
           )}
         >
           <Icon
             className={cn(
-              "size-[18px]",
-              isSoon ? "text-muted-foreground/50" : "text-[var(--accent-color)]",
+              compact ? "size-[17px]" : "size-[19px]",
+              isSoon ? "text-[var(--accent-color)]/70 saturate-[0.35]" : "text-foreground",
             )}
           />
         </span>
@@ -58,16 +98,38 @@ export function AgentNode({ node, index }: AgentNodeProps) {
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              "truncate text-[12.5px] font-medium leading-tight",
-              isSoon ? "text-muted-foreground/70" : "text-foreground",
+              // Declared larger than the visual target (13px/11px minimums):
+              // the whole network stage is drawn at design size and then
+              // scaled down with a CSS transform, which shrinks rendered text
+              // below its declared size. These values are picked so the
+              // *visual* result still clears 13px/11px at the scales the
+              // stage actually renders at — see network-layout.ts's Step 3
+              // notes if you need to re-derive them.
+              compact ? "text-[15px]" : "text-[16px]",
+              "leading-tight",
+              isSoon
+                ? "font-medium text-muted-foreground"
+                : "font-semibold text-foreground",
             )}
           >
             {node.name}
           </p>
-          <p className="mt-0.5 truncate text-[10px] leading-tight text-muted-foreground">
-            {node.tagline}
-          </p>
-          <StatusDot status={node.status} className="mt-1" />
+          {!compact && (
+            <>
+              {/* No truncation: the card is sized to fit the longest tagline.
+                  Dropped entirely in compact mode instead of shrinking further
+                  or truncating, per the legibility rule. */}
+              <p
+                className={cn(
+                  "mt-0.5 text-[13px] leading-tight",
+                  isSoon ? "text-muted-foreground-dim" : "text-muted-foreground",
+                )}
+              >
+                {node.tagline}
+              </p>
+              <StatusDot status={node.status} className="mt-1" />
+            </>
+          )}
         </div>
       </div>
     </motion.div>

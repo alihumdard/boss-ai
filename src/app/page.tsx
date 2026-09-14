@@ -1,32 +1,23 @@
 import { AppShell } from "@/components/shell/app-shell";
-import { GreetingRow } from "@/components/shell/greeting-row";
 import { VoiceStage } from "@/components/shell/voice-stage";
-import { ActiveAgents } from "@/components/panels/active-agents";
-import { StatsPanel } from "@/components/panels/stats-panel";
-import { QuickActionsPanel } from "@/components/panels/quick-actions-panel";
-import { RecentActivity } from "@/components/panels/recent-activity";
-import { LiveConsole } from "@/components/panels/live-console";
 import { UpcomingTasks } from "@/components/panels/upcoming-tasks";
+import { RecentActivity } from "@/components/panels/recent-activity";
 
 export default function DashboardPage() {
   return (
     <AppShell
       rail={
         <>
-          <ActiveAgents className="min-h-0 flex-1" />
-          <StatsPanel className="shrink-0" />
-          <QuickActionsPanel className="shrink-0" />
+          {/* Right column: Upcoming Tasks -> Recent Activity. Quick Actions
+              was cut (not needed) and the Active Agents list is gone for
+              good — live vs coming-soon status is already shown on the
+              agent network. */}
+          <UpcomingTasks className="min-h-0 flex-1" enterDelayMs={0} />
+          <RecentActivity className="min-h-0 flex-1" enterDelayMs={60} />
         </>
       }
     >
-      <GreetingRow />
-      <VoiceStage>
-        <div className="mt-3 grid shrink-0 grid-cols-3 gap-4">
-          <RecentActivity className="h-[200px]" />
-          <LiveConsole className="h-[200px]" />
-          <UpcomingTasks className="h-[200px]" />
-        </div>
-      </VoiceStage>
+      <VoiceStage />
     </AppShell>
   );
 }

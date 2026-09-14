@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Orbitron } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { VisibilityGuard } from "@/components/shell/visibility-guard";
 import "./globals.css";
 
 const inter = Inter({
@@ -31,7 +32,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`dark ${inter.variable} ${jetbrainsMono.variable} ${orbitron.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* tab-visible by default (matches usePageVisible's SSR-safe initial
+          value of true) so animations run from first paint; VisibilityGuard
+          removes it only once the tab is actually confirmed hidden. */}
+      <body className="tab-visible flex min-h-full flex-col">
+        <VisibilityGuard />
         <div className="starfield" aria-hidden />
         <TooltipProvider delay={200}>{children}</TooltipProvider>
       </body>

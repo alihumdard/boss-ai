@@ -1,41 +1,45 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useVoiceInput } from "@/lib/use-voice-input";
 import { AgentNetwork } from "@/components/network/agent-network";
 import { VoiceOrb } from "@/components/orb/voice-orb";
-import { CommandBar } from "./command-bar";
+import { VoiceConsole } from "@/components/panels/voice-console";
 
 /**
- * Owns the voice session so the orb and the command bar stay in sync: the
- * mic level the bar meters is the same value driving the orb's geometry.
+ * Owns the voice session so the orb and the Voice Console stay in sync: the
+ * mic level the console meters is the same value driving the orb's geometry.
  *
- * Content that sits between the network and the bar is passed as a slot.
- * (A render prop would be a function crossing the server/client boundary,
- * which React cannot serialize.)
+ * Renders the centre column in plain document flow: network (flex-1, takes
+ * whatever height is left — the greeting lives in the top bar, not here) ->
+ * voice console (content-sized, sits below in normal flow, no absolute
+ * positioning).
  */
-export function VoiceStage({ children }: { children?: ReactNode }) {
+export function VoiceStage() {
   const { listening, audioLevel, orbState, denied, toggle } = useVoiceInput();
 
   return (
     <>
       <AgentNetwork
-        className="min-h-[330px] flex-1"
+        className="min-h-0 flex-1"
         hub={
           <VoiceOrb
-            size={360}
+            // Fills the hub box the stage gives it (sized from that variant's
+            // ORB_R), so the connectors land on the visible disc's edge.
+            fill
             state={orbState}
             // Idle keeps a gentle floor so the orb never looks frozen.
             audioLevel={listening ? audioLevel : 0.28}
           />
         }
       />
-      {children}
-      <CommandBar
+
+      <VoiceConsole
+        orbState={orbState}
         listening={listening}
         audioLevel={audioLevel}
         denied={denied}
         onToggleListening={toggle}
+        className="shrink-0"
       />
     </>
   );
