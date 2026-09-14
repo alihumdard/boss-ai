@@ -18,6 +18,72 @@ Check before screenshotting; don't assume.
 **Screenshots:** `node scripts/shot.mjs <label>` captures 1366×650 and 1920×960 into
 `shots/` and reports whether the page scrolls. Override the target with `SHOT_URL`.
 
+## Voice agent (`agent/`)
+
+A separate Python LiveKit worker ([agent/main.py](agent/main.py)) that joins the
+room the dashboard creates and does STT → LLM → TTS. The dashboard's
+`use-voice-session.ts` hook talks to it over LiveKit; `/api/livekit-token`
+issues the room token.
+
+**Run both, in order:**
+
+```bash
+# 1. Agent worker (from agent/, first time: python -m venv .venv && pip install -r requirements.txt)
+cd agent
+.venv\Scripts\activate
+python main.py start          # or `dev` for verbose/console logs — see note below
+
+# 2. Dashboard, in a second terminal, from the repo root
+npm run dev
+```
+
+The dashboard falls back to a mic-only visualiser with no agent if
+`NEXT_PUBLIC_LIVEKIT_URL` is unset — the voice pipeline only activates once the
+worker is registered and the env vars below are present in `agent/.env` (and
+mirrored into the dashboard's `.env.local` for `LIVEKIT_URL` /
+`LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` / `NEXT_PUBLIC_LIVEKIT_URL`).
+
+- **`VOICE_PROVIDER=groq`** (dev/fast path) needs `GROQ_API_KEY` and
+  `DEEPGRAM_API_KEY`. LLM is `groq.LLM("openai/gpt-oss-120b")` — **not**
+  `llama-3.3-70b-versatile`, which this Groq account's key returns 404
+  "model not found" for (Groq's catalog has moved on; re-check
+  `GET /openai/v1/models` if this ever 404s again). TTS is
+  `groq.TTS()` (defaults to `canopylabs/orpheus-v1-english` / voice
+  `"autumn"`) — **not** `playai-tts`, which Groq has decommissioned.
+  **Manual step required:** this TTS model needs its terms accepted once at
+  https://console.groq.com/playground?model=canopylabs%2Forpheus-v1-english
+  by the org admin, or every reply's TTS synthesis 400s ("Bad Request";
+  the real reason only shows calling the Groq endpoint directly, the
+  livekit-agents log just says "Bad Request"). The agent still joins,
+  greets (LLM path runs), and takes tool calls without this — only the
+  spoken audio is missing until it's accepted.
+- **`VOICE_PROVIDER=production`** needs `ANTHROPIC_API_KEY` and
+  `CARTESIA_API_KEY` (both currently blank in `agent/.env` — untested end to
+  end here for that reason). LLM `claude-haiku-4-5`, TTS Cartesia defaults.
+- A worker just past "registered worker" in its logs briefly reports itself
+  "at full capacity" while it finishes loading the Silero/turn-detector
+  models and won't accept a dispatch — give it 60-90s after startup before
+  joining a room, or the first join attempt silently no-ops (no job, no
+  error, the room just sits empty).
+- `python main.py download-files` (or `uv run -m livekit.agents
+  download-files`, since the script-level command is deprecated) fetches the
+  Silero VAD and turn-detector model weights on first setup.
+- **`LOG_LEVEL`** (default `warn`) sets the SDK/plugin root logger via
+  `LIVEKIT_LOG_LEVEL` — that env var only accepts its own lowercase names
+  (`warn`/`info`/`debug`/...), never Python's `WARNING`/`INFO`; `main.py`
+  maps common spellings for you. This agent's own per-turn logs (`heard: ...`
+  / `tool: ...` / `reply: ...`) always print at INFO on a separate,
+  non-propagating plain-text logger, regardless of `LOG_LEVEL` — that's what
+  keeps them from being buried in (or duplicated by) the SDK's JSON logger.
+- **`IDLE_TIMEOUT_SECONDS`** (default `300`) — how long the mic can stay open
+  with no speech before the session ends itself. Resets on every
+  `user_state_changed`/`agent_state_changed` event, so an open mic with
+  silence doesn't trip it early; only a closed/disconnected participant or
+  the 10-minute hard call cap ends the session before that.
+- Room input uses LiveKit Cloud's BVC noise cancellation
+  (`livekit-plugins-noise-cancellation`) so background noise doesn't trip
+  turn detection.
+
 ## Hard rules
 
 - The product is **BOSS**. Never J.A.R.V.I.S., anywhere — UI, console lines, comments.

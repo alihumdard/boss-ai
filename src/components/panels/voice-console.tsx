@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Send, Square, Terminal } from "lucide-react";
 import type { OrbState } from "@/components/orb/types";
+import type { VoiceSessionState, TranscriptLine } from "@/lib/use-voice-session";
 import {
   CONSOLE_LINES,
   CONSOLE_EVENT_POOL,
@@ -53,10 +54,19 @@ const KIND_CLASS: Record<ConsoleLineKind, string> = {
 };
 
 const MAX_LINES = 50;
-let lineSeq = 0;
+// Module-scoped counter, so a dev-mode Fast Refresh remount (which re-runs
+// this module but not a full page reload) can't collide with ids already
+// rendered from before the reload — a plain per-mount counter did.
+let lineSeq = Date.now();
 function nextId() {
   lineSeq += 1;
   return `line-${lineSeq}`;
+}
+
+function formatElapsed(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function timestamp() {
@@ -154,7 +164,15 @@ function useConsoleLines(orbState: OrbState) {
     };
   }, [visible]);
 
-  return { lines, pendingId, setPendingId, reducedMotion };
+  const pushLine = useCallback((message: string, kind: ConsoleLineKind) => {
+    const id = nextId();
+    setLines((prev) => [
+      ...prev.slice(-(MAX_LINES - 1)),
+      { id, timestamp: timestamp(), message, kind },
+    ]);
+  }, []);
+
+  return { lines, pendingId, setPendingId, reducedMotion, pushLine };
 }
 
 export interface VoiceConsoleProps {
@@ -163,8 +181,21 @@ export interface VoiceConsoleProps {
   audioLevel: number;
   denied: boolean;
   onToggleListening: () => void;
+  /** LiveKit connection state, when the real agent is wired up. */
+  sessionState?: VoiceSessionState;
+  sessionError?: string | null;
+  /** True once the agent has disconnected after a connected session. */
+  sessionDisconnected?: boolean;
+  /** Push-to-talk: the mic is open and capturing this turn. */
+  recording?: boolean;
+  recordingSeconds?: number;
+  transcript?: TranscriptLine[];
   className?: string;
 }
+
+const SESSION_STATUS_LABEL: Partial<Record<VoiceSessionState, string>> = {
+  connecting: "Connecting to BOSS...",
+};
 
 /**
  * Plain vertical stack, normal document flow — no absolute positioning, no
@@ -183,18 +214,44 @@ export function VoiceConsole({
   audioLevel,
   denied,
   onToggleListening,
+  sessionState,
+  sessionError,
+  sessionDisconnected,
+  recording,
+  recordingSeconds = 0,
+  transcript,
   className,
 }: VoiceConsoleProps) {
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const active = orbState !== "idle";
-  const { lines, pendingId, setPendingId, reducedMotion } = useConsoleLines(orbState);
+  const { lines, pendingId, setPendingId, reducedMotion, pushLine } =
+    useConsoleLines(orbState);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [lines]);
+
+  const lastSessionStateRef = useRef<VoiceSessionState | undefined>(undefined);
+  useEffect(() => {
+    if (!sessionState || sessionState === lastSessionStateRef.current) return;
+    lastSessionStateRef.current = sessionState;
+    if (sessionState === "connecting") {
+      pushLine("Connecting to BOSS agent...", "info");
+    } else if (sessionState === "listening") {
+      pushLine("Connected to BOSS agent.", "success");
+    } else if (sessionState === "error" && sessionError) {
+      pushLine(sessionError, "warning");
+    } else if (sessionState === "idle" && sessionDisconnected) {
+      pushLine("BOSS disconnected.", "warning");
+    }
+  }, [sessionState, sessionError, sessionDisconnected, pushLine]);
+
+  const latestTranscript = transcript?.length
+    ? transcript[transcript.length - 1]
+    : null;
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -269,19 +326,40 @@ export function VoiceConsole({
         </div>
       </div>
 
-      {/* 2. Status line */}
-      <p
-        className={cn(
-          "mt-2 text-center text-[12.5px] font-medium transition-opacity",
-          active
-            ? "text-cyan drop-shadow-[0_0_10px_var(--boss-cyan)]"
-            : "text-muted-foreground",
-        )}
-      >
-        {listening && denied
-          ? "No microphone — showing a simulated level"
-          : STATE_LABEL[orbState]}
-      </p>
+      {/* 2. Status line — while recording it becomes a live indicator with an
+          elapsed timer; otherwise inline errors take priority so the panel
+          never shows a blank/frozen state when the mic or the agent fails. */}
+      {recording ? (
+        <p className="mt-2 flex items-center justify-center gap-2 text-[12.5px] font-medium text-rose">
+          <span className="size-2 rounded-full bg-rose animate-pulse-glow" />
+          Recording
+          <span className="tabular-nums text-foreground">
+            {formatElapsed(recordingSeconds)}
+          </span>
+          <span className="text-muted-foreground">— press again to send</span>
+        </p>
+      ) : (
+        <p
+          className={cn(
+            "mt-2 text-center text-[12.5px] font-medium transition-opacity",
+            sessionState === "error" || sessionDisconnected
+              ? "text-rose"
+              : active
+                ? "text-cyan drop-shadow-[0_0_10px_var(--boss-cyan)]"
+                : "text-muted-foreground",
+          )}
+        >
+          {sessionState === "error"
+            ? (sessionError ?? "Couldn't reach the BOSS agent. Is it running?")
+            : sessionState === "idle" && sessionDisconnected
+              ? "BOSS disconnected — tap to reconnect"
+              : sessionState && SESSION_STATUS_LABEL[sessionState]
+                ? SESSION_STATUS_LABEL[sessionState]
+                : listening && denied
+                  ? "No microphone — showing a simulated level"
+                  : STATE_LABEL[orbState]}
+        </p>
+      )}
 
       {/* 3. Console log — transparent, 5 lines, auto-scroll */}
       <div className="mt-3 flex items-stretch gap-3">
@@ -326,6 +404,24 @@ export function VoiceConsole({
           </div>
         </div>
       </div>
+
+      {/* Live transcript, shown above the input while the agent session has
+          something to say — the latest line only, so it reads like a caption
+          rather than a growing chat log. */}
+      {latestTranscript && (
+        <p className="mt-2 truncate text-[12px] text-muted-foreground">
+          <span
+            className={cn(
+              "mr-1.5 font-medium",
+              latestTranscript.role === "agent" ? "text-violet" : "text-cyan",
+            )}
+          >
+            {latestTranscript.role === "agent" ? "BOSS:" : "You:"}
+          </span>
+          {latestTranscript.text}
+          {!latestTranscript.final && <ThinkingDots />}
+        </p>
+      )}
 
       {/* 4. Text input row */}
       <div className="mt-3 flex items-center gap-2">

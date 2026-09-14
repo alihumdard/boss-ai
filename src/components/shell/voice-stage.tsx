@@ -1,9 +1,14 @@
 "use client";
 
 import { useVoiceInput } from "@/lib/use-voice-input";
+import { useVoiceSession } from "@/lib/use-voice-session";
 import { AgentNetwork } from "@/components/network/agent-network";
 import { VoiceOrb } from "@/components/orb/voice-orb";
 import { VoiceConsole } from "@/components/panels/voice-console";
+
+// LiveKit is only usable once the public URL is configured. Falls back to
+// the mic-only visualiser (no agent, no transcript) otherwise.
+const LIVEKIT_ENABLED = Boolean(process.env.NEXT_PUBLIC_LIVEKIT_URL);
 
 /**
  * Owns the voice session so the orb and the Voice Console stay in sync: the
@@ -15,7 +20,25 @@ import { VoiceConsole } from "@/components/panels/voice-console";
  * positioning).
  */
 export function VoiceStage() {
-  const { listening, audioLevel, orbState, denied, toggle } = useVoiceInput();
+  const fallback = useVoiceInput();
+  const session = useVoiceSession();
+
+  // Push-to-talk: the mic button reflects whether we're capturing this turn,
+  // not merely whether the session is connected.
+  const listening = LIVEKIT_ENABLED ? session.recording : fallback.listening;
+  const orbState = LIVEKIT_ENABLED ? session.orbState : fallback.orbState;
+  const audioLevel = LIVEKIT_ENABLED ? session.audioLevel : fallback.audioLevel;
+  const denied = LIVEKIT_ENABLED
+    ? session.state === "error" && /microphone/i.test(session.error ?? "")
+    : fallback.denied;
+
+  function toggle() {
+    if (!LIVEKIT_ENABLED) {
+      fallback.toggle();
+      return;
+    }
+    session.toggleRecording();
+  }
 
   return (
     <>
@@ -39,6 +62,12 @@ export function VoiceStage() {
         audioLevel={audioLevel}
         denied={denied}
         onToggleListening={toggle}
+        sessionState={LIVEKIT_ENABLED ? session.state : undefined}
+        sessionError={LIVEKIT_ENABLED ? session.error : null}
+        sessionDisconnected={LIVEKIT_ENABLED ? session.disconnected : false}
+        recording={LIVEKIT_ENABLED ? session.recording : false}
+        recordingSeconds={LIVEKIT_ENABLED ? session.recordingSeconds : 0}
+        transcript={LIVEKIT_ENABLED ? session.transcript : []}
         className="shrink-0"
       />
     </>
